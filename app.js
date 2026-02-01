@@ -11,11 +11,12 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://your-frontend.vercel.app" // replace after frontend deploy
+      "https://googledrive-frontend-5f1qnir1o-srivathsan-ss-projects.vercel.app"
     ],
-    credentials: true
+    credentials: true,
   })
 );
+
 
 /* ---------- Middleware ---------- */
 app.use(express.json());
