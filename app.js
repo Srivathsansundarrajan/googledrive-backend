@@ -11,11 +11,12 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://googledrive-frontend-5f1qnir1o-srivathsan-ss-projects.vercel.app"
+      "https://googledrive-frontend-gamma.vercel.app"
     ],
     credentials: true,
   })
 );
+
 
 
 /* ---------- Middleware ---------- */
