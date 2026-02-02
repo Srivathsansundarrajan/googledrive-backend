@@ -35,7 +35,9 @@ exports.register = async (req, res) => {
       expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
     });
 
-    const activationLink = `http://localhost:5000/auth/activate/${tokenValue}`;
+    // const activationLink = `http://localhost:5000/auth/activate/${tokenValue}`;
+    const activationLink =
+  `${process.env.BACKEND_BASE_URL}/auth/activate/${tokenValue}`;
 
     await sendEmail({
       to: user.email,
@@ -145,7 +147,9 @@ exports.forgotPassword = async (req, res) => {
       expiresAt: Date.now() + 15 * 60 * 1000 // 15 minutes
     });
 
-    const resetLink = `http://localhost:3000/reset-password/${token}`;
+    // const resetLink = `http://localhost:3000/reset-password/${token}`;
+    const resetLink =
+  `${process.env.FRONTEND_BASE_URL}/reset-password/${token}`;
 
     await sendEmail({
       to: user.email,
