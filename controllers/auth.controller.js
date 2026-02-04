@@ -39,14 +39,42 @@ exports.register = async (req, res) => {
     const clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, "") : "http://localhost:5173";
     const activationLink = `${clientUrl}/activate/${tokenValue}`;
 
+    console.log("GENERATED ACTIVATION LINK:", activationLink); // Debug log
+
     try {
       await sendEmail({
         to: user.email,
-        subject: "Activate your Google Drive account",
+        subject: "Verify your email for Google Drive Clone",
         html: `
-          <h3>Account Activation</h3>
-          <p>Click the link below to activate your account:</p>
-          <a href="${activationLink}">${activationLink}</a>
+          <div style="font-family: 'Google Sans', Roboto, RobotoDraft, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+            <div style="text-align: center; margin-bottom: 24px;">
+              <h1 style="color: #1a73e8; font-size: 24px; margin: 0;">Google Drive Clone</h1>
+            </div>
+            
+            <div style="padding: 20px 0;">
+              <h2 style="font-size: 20px; color: #202124; margin-bottom: 16px;">Verify your email address</h2>
+              <p style="font-size: 16px; color: #3c4043; line-height: 1.5; margin-bottom: 24px;">
+                Thanks for creating an account! Please confirm that <strong>${user.email}</strong> is your email address by clicking the button below.
+              </p>
+              
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${activationLink}" style="background-color: #1a73e8; color: white; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: 500; font-size: 16px; display: inline-block;">
+                  Verify Email
+                </a>
+              </div>
+              
+              <p style="font-size: 14px; color: #5f6368; margin-top: 24px;">
+                Or paste this link into your browser: <br>
+                <a href="${activationLink}" style="color: #1a73e8; word-break: break-all;">${activationLink}</a>
+              </p>
+            </div>
+            
+            <div style="border-top: 1px solid #e0e0e0; padding-top: 20px; margin-top: 20px; text-align: center;">
+              <p style="font-size: 12px; color: #9aa0a6;">
+                This is a project for the GUVI Hackathon. If you didn't request this, you can safely ignore this email.
+              </p>
+            </div>
+          </div>
         `
       });
       console.log("Activation email sent successfully");
