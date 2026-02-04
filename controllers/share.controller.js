@@ -61,6 +61,7 @@ exports.getSharedWithMe = async (req, res) => {
         const userEmail = req.user.email;
 
         const shares = await Share.find({ sharedWith: userEmail })
+            .populate("sharedBy", "email firstName lastName")
             .sort({ createdAt: -1 });
 
         // Get resource details
@@ -114,6 +115,83 @@ exports.accessByToken = async (req, res) => {
 
         res.json({ share, resource, previewUrl });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// Get contents of a shared folder
+exports.getSharedFolderContents = async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { path = "/" } = req.query;
+
+        const share = await Share.findOne({ accessToken: token });
+        if (!share) {
+            return res.status(404).json({ message: "Share link not found or expired" });
+        }
+
+        // Check expiration
+        if (share.expiresAt && new Date() > share.expiresAt) {
+            return res.status(410).json({ message: "Share link has expired" });
+        }
+
+        if (share.resourceType !== "folder") {
+            return res.status(400).json({ message: "Shared resource is not a folder" });
+        }
+
+        const rootFolder = await Folder.findById(share.resourceId);
+        if (!rootFolder) {
+            return res.status(404).json({ message: "Shared folder not found" });
+        }
+
+        // Calculate the actual query path
+        // If query path is "/", we return contents of the root shared folder.
+        // If query path is "/sub", we look for a folder named "sub" inside the root.
+
+        let targetParentPath;
+        let ownerId = rootFolder.ownerId; // All contents must belong to the original owner
+
+        if (path === "/") {
+            // We want direct children of the shared folder
+            // BUT: The shared folder itself has a parentPath (e.g. "/" or "/Documents")
+            // The children of the shared folder will have parentPath = (rootFolder.parentPath === "/" ? "" : rootFolder.parentPath) + "/" + rootFolder.name
+
+            const rootParentPath = rootFolder.parentPath === "/" ? "" : rootFolder.parentPath;
+            targetParentPath = `${rootParentPath}/${rootFolder.name}`;
+        } else {
+            // Navigation inside the shared folder
+            // path is relative to the shared folder root, e.g. "/subfolder"
+            // We need to construct the absolute path in the owner's drive
+
+            const rootParentPath = rootFolder.parentPath === "/" ? "" : rootFolder.parentPath;
+            const rootAbsolutePath = `${rootParentPath}/${rootFolder.name}`;
+            targetParentPath = `${rootAbsolutePath}${path}`; // e.g. /MyFolder/subfolder
+        }
+
+        console.log(`[SharedFolder] Token: ${token}, Relative: ${path}, TargetParent: ${targetParentPath}`);
+
+        const folders = await Folder.find({
+            ownerId,
+            parentPath: targetParentPath,
+            isDeleted: { $ne: true }
+        });
+
+        const files = await File.find({
+            ownerId,
+            folderPath: targetParentPath,
+            isDeleted: { $ne: true }
+        });
+
+        res.json({
+            share,
+            rootFolderName: rootFolder.name,
+            currentPath: path,
+            folders,
+            files
+        });
+
+    } catch (err) {
+        console.error("Shared folder error:", err);
         res.status(500).json({ error: err.message });
     }
 };

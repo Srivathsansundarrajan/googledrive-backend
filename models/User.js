@@ -6,7 +6,8 @@ const userSchema = new mongoose.Schema({
   lastName: String,
   password: String,
   profilePic: String, // S3 key or URL
-  isActive: { type: Boolean, default: false }
+  isActive: { type: Boolean, default: false },
+  storageUsed: { type: Number, default: 0 }
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);

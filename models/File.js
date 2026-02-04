@@ -29,4 +29,10 @@ const fileSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+// Indexes for performance
+fileSchema.index({ ownerId: 1, folderPath: 1 });
+fileSchema.index({ ownerId: 1, isDeleted: 1 });
+fileSchema.index({ ownerId: 1, isStarred: 1 });
+fileSchema.index({ sharedDriveId: 1 });
+
 module.exports = mongoose.model("File", fileSchema);

@@ -1,6 +1,7 @@
 const s3 = require("../services/s3.service");
 const File = require("../models/File");
 const Folder = require("../models/Folder");
+const User = require("../models/User");
 const unzipper = require("unzipper");
 const path = require("path");
 const { Readable } = require("stream");
@@ -153,10 +154,19 @@ exports.uploadFile = async (req, res) => {
             fileName: path.basename(entryPath),
             s3Key,
             folderPath: fileFolderPath,
+            size: Buffer.byteLength(content) // Ensure size is tracked
           });
+
+          return Buffer.byteLength(content); // Return size for totaling
         });
 
-      await Promise.all(uploadPromises);
+      const sizes = await Promise.all(uploadPromises);
+      const totalSize = sizes.reduce((acc, curr) => acc + (curr || 0), 0);
+
+      // Update user storage
+      if (totalSize > 0) {
+        await User.findByIdAndUpdate(userId, { $inc: { storageUsed: totalSize } });
+      }
 
       console.log("ZIP extraction complete. Created folders:", Array.from(createdFolders));
 
@@ -280,6 +290,9 @@ exports.uploadFile = async (req, res) => {
       mimeType: file.mimetype,
       folderPath: actualFolderPath
     });
+
+    // Update user storage usage
+    await User.findByIdAndUpdate(userId, { $inc: { storageUsed: file.size } });
 
 
     return res.status(201).json({
@@ -426,6 +439,14 @@ exports.deleteFile = async (req, res) => {
     file.isDeleted = true;
     file.deletedAt = new Date();
     await file.save();
+
+    // Decrement storage usage (since we treat "Trash" as not occupying "Active" quota in typical drive apps, 
+    // OR we can keep it occupying quota until permanently deleted. 
+    // The previous implementation filtered out isDeleted: true from aggregation, meaning trash didn't count. 
+    // So we should decrement here to maintain consistency.)
+    if (file.size) {
+      await User.findByIdAndUpdate(userId, { $inc: { storageUsed: -file.size } });
+    }
 
     res.json({ message: "File moved to trash" });
 

@@ -80,6 +80,42 @@ exports.getNotes = async (req, res) => {
     }
 };
 
+// Get notes for multiple resources (Batch)
+exports.getBatchNotes = async (req, res) => {
+    try {
+        const { items } = req.body; // Array of { resourceType, resourceId }
+
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.json({ notes: {} });
+        }
+
+        // Optimize: use $or query
+        const queries = items.map(item => ({
+            resourceType: item.resourceType,
+            resourceId: item.resourceId
+        }));
+
+        const allNotes = await StickyNote.find({
+            $or: queries
+        }).sort({ createdAt: -1 });
+
+        // Group by resource key
+        const notesMap = {};
+        allNotes.forEach(note => {
+            const key = `${note.resourceType}-${note.resourceId}`;
+            if (!notesMap[key]) {
+                notesMap[key] = [];
+            }
+            notesMap[key].push(note);
+        });
+
+        res.json({ notes: notesMap });
+    } catch (err) {
+        console.error("Batch notes error:", err);
+        res.status(500).json({ error: err.message });
+    }
+};
+
 // Update a note
 exports.updateNote = async (req, res) => {
     try {

@@ -9,6 +9,9 @@ router.post("/", authMiddleware, stickyNoteController.addNote);
 // Get notes for a resource
 router.get("/:resourceType/:resourceId", authMiddleware, stickyNoteController.getNotes);
 
+// Get matching notes for multiple resources
+router.post("/batch", authMiddleware, stickyNoteController.getBatchNotes);
+
 // Update a note
 router.put("/:id", authMiddleware, stickyNoteController.updateNote);
 

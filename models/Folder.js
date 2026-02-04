@@ -29,4 +29,9 @@ const folderSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+// Indexes for performance
+folderSchema.index({ ownerId: 1, parentPath: 1 });
+folderSchema.index({ ownerId: 1, isDeleted: 1 });
+folderSchema.index({ ownerId: 1, isStarred: 1 });
+
 module.exports = mongoose.model("Folder", folderSchema);
