@@ -7,7 +7,8 @@ exports.getStorageUsage = async (req, res) => {
         const user = await User.findById(userId);
 
         // Check if cached storageUsed exists and is not undefined
-        if (user && user.storageUsed !== undefined && user.storageUsed !== null) {
+        // If query param ?breakdown=true is present, we skip this fast path to force recalculation/breakdown
+        if (user && user.storageUsed !== undefined && user.storageUsed !== null && req.query.breakdown !== 'true') {
             // Return cached value, but still get breakdown efficiently if needed?
             // Actually sidebar just needs total. The breakdown modal calls this too? 
             // Yes. To support breakdown without heavy query, we might need to cache breakdown too.
