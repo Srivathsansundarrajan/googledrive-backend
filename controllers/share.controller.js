@@ -101,7 +101,18 @@ exports.accessByToken = async (req, res) => {
             return res.status(404).json({ message: "Resource no longer exists" });
         }
 
-        res.json({ share, resource });
+        let previewUrl = null;
+        if (share.resourceType === "file") {
+            // Generate S3 Signed URL for access
+            // Enforce basic access: If you have the token, you can VIEW.
+            previewUrl = require("../services/s3.service").getSignedUrl("getObject", {
+                Bucket: process.env.AWS_S3_BUCKET,
+                Key: resource.s3Key,
+                Expires: 300 // 5 minutes
+            });
+        }
+
+        res.json({ share, resource, previewUrl });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

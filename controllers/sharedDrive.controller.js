@@ -368,6 +368,28 @@ exports.uploadToSharedDrive = async (req, res) => {
             return res.status(403).json({ message: "Viewers cannot upload files" });
         }
 
+        // Auto-create parent folders for the entire path
+        if (folderPath !== "/") {
+            const pathParts = folderPath.split("/").filter(Boolean);
+            let currentParentPath = "/";
+
+            // Create each folder in the path if it doesn't exist
+            for (let i = 0; i < pathParts.length; i++) {
+                const folderName = pathParts[i];
+
+                await Folder.findOneAndUpdate(
+                    { sharedDriveId: id, name: folderName, parentPath: currentParentPath },
+                    { sharedDriveId: id, name: folderName, parentPath: currentParentPath, ownerId: null },
+                    { upsert: true, new: true }
+                );
+
+                // Update parent path for next folder
+                currentParentPath = currentParentPath === "/"
+                    ? `/${folderName}`
+                    : `${currentParentPath}/${folderName}`;
+            }
+        }
+
         // Upload to S3
         const s3Key = `shared-drives/${id}/${Date.now()}-${file.originalname}`;
         await s3.upload({

@@ -32,4 +32,7 @@ const notificationSchema = new mongoose.Schema({
     }
 });
 
+// Index for efficient fetching of user notifications
+notificationSchema.index({ recipientId: 1, createdAt: -1 });
+
 module.exports = mongoose.model("Notification", notificationSchema);

@@ -39,16 +39,21 @@ exports.addNote = async (req, res) => {
                 const otherMembers = sharedDrive.members.filter(m => m.email !== userEmail);
                 const resourceName = resourceType === "file" ? resource.fileName : resource.name;
 
-                for (const member of otherMembers) {
-                    if (member.userId) {
-                        await notificationController.createNotification(
-                            member.userId,
-                            "note",
-                            `New sticky note in ${sharedDrive.name}`,
-                            `${userEmail.split("@")[0]} added a note to ${resourceName}`,
-                            `/shared-drives/${sharedDrive._id}`
-                        );
-                    }
+                // Prepare notifications batch
+                const notifications = otherMembers.map(member => {
+                    if (!member.userId) return null;
+                    return {
+                        recipientId: member.userId,
+                        type: "note",
+                        title: `New sticky note in ${sharedDrive.name}`,
+                        message: `${userEmail.split("@")[0]} added a note to ${resourceName}`,
+                        link: `/shared-drives/${sharedDrive._id}`
+                    };
+                }).filter(Boolean); // Remove nulls
+
+                // Batch insert
+                if (notifications.length > 0) {
+                    await notificationController.createManyNotifications(notifications);
                 }
             }
         }

@@ -100,3 +100,29 @@ exports.createNotification = async (recipientId, type, title, message, link = nu
     return;
 };
 
+// Internal helper to create multiple notifications (batch)
+exports.createManyNotifications = async (notificationsArray) => {
+    try {
+        if (!notificationsArray || notificationsArray.length === 0) return;
+
+        const createdNotifications = await Notification.insertMany(notificationsArray);
+
+        // Emit socket events asynchronously
+        try {
+            const io = socket.getIO();
+            createdNotifications.forEach(notification => {
+                const socketId = socket.getUserSocketId(notification.recipientId.toString());
+                if (socketId) {
+                    io.to(socketId).emit("new_notification", notification);
+                }
+            });
+        } catch (err) {
+            console.error("Socket emit error:", err);
+        }
+
+        return createdNotifications;
+    } catch (err) {
+        console.error("Failed to create notifications batch:", err);
+    }
+};
+
