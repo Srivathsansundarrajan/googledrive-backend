@@ -54,18 +54,18 @@ app.use(
 app.use(express.json());
 
 /* ---------- Routes ---------- */
-app.use("/auth", require("./routes/auth.routes"));
-app.use("/files", require("./routes/file.routes"));
-app.use("/folders", require("./routes/folder.routes"));
-app.use("/shared-drives", require("./routes/sharedDrive.routes"));
-app.use("/share", require("./routes/share.routes"));
-app.use("/chat", require("./routes/chat.routes"));
-app.use("/notes", require("./routes/stickyNote.routes"));
-app.use("/access", require("./routes/accessLog.routes"));
-app.use("/trash", require("./routes/trash.routes"));
-app.use("/storage", require("./routes/storage.routes"));
-app.use("/notifications", require("./routes/notification.routes"));
-app.use("/starred", require("./routes/starred.routes"));
+app.use("/api/auth", require("./routes/auth.routes"));
+app.use("/api/files", require("./routes/file.routes"));
+app.use("/api/folders", require("./routes/folder.routes"));
+app.use("/api/shared-drives", require("./routes/sharedDrive.routes"));
+app.use("/api/share", require("./routes/share.routes"));
+app.use("/api/chat", require("./routes/chat.routes"));
+app.use("/api/notes", require("./routes/stickyNote.routes"));
+app.use("/api/access", require("./routes/accessLog.routes"));
+app.use("/api/trash", require("./routes/trash.routes"));
+app.use("/api/storage", require("./routes/storage.routes"));
+app.use("/api/notifications", require("./routes/notification.routes"));
+app.use("/api/starred", require("./routes/starred.routes"));
 
 /* ---------- Health Check ---------- */
 app.get("/", (req, res) => {
