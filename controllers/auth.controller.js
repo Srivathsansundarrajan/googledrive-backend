@@ -37,17 +37,32 @@ exports.register = async (req, res) => {
 
     // const activationLink = `http://localhost:5000/auth/activate/${tokenValue}`;
     const activationLink =
-  `${process.env.BACKEND_BASE_URL}/auth/activate/${tokenValue}`;
+      `${process.env.BACKEND_BASE_URL}/auth/activate/${tokenValue}`;
 
-    await sendEmail({
-      to: user.email,
-      subject: "Activate your Google Drive account",
-      html: `
-        <h3>Account Activation</h3>
-        <p>Click the link below to activate your account:</p>
-        <a href="${activationLink}">${activationLink}</a>
-      `
-    });
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: "Activate your Google Drive account",
+        html: `
+          <h3>Account Activation</h3>
+          <p>Click the link below to activate your account:</p>
+          <a href="${activationLink}">${activationLink}</a>
+        `
+      });
+      console.log("Activation email sent successfully");
+    } catch (emailError) {
+      console.error("Failed to send activation email:", emailError);
+      // Optional: Delete the user if email request fails so they can try again?
+      // await User.findByIdAndDelete(user._id);
+      // await Token.deleteMany({ userId: user._id });
+      // return res.status(500).json({ message: "Failed to send activation email. Please try again." });
+
+      // For now, let's return error so frontend stops loading
+      return res.status(500).json({
+        message: "Account created but failed to send email. Please contact support or try again.",
+        error: emailError.message
+      });
+    }
 
 
     res.status(201).json({
@@ -149,7 +164,7 @@ exports.forgotPassword = async (req, res) => {
 
     // const resetLink = `http://localhost:3000/reset-password/${token}`;
     const resetLink =
-  `${process.env.FRONTEND_BASE_URL}/reset-password/${token}`;
+      `${process.env.FRONTEND_BASE_URL}/reset-password/${token}`;
 
     await sendEmail({
       to: user.email,

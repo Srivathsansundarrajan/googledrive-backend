@@ -18,7 +18,7 @@ const app = express();
 // );
 
 // Remove trailing slash from CLIENT_URL if present
-const clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, "") : "";
+const clientUrl = process.env.CLIENT_URL.replace(/\/$/, "");
 
 app.use(
   cors({
