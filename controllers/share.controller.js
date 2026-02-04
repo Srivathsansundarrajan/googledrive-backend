@@ -38,7 +38,8 @@ exports.shareResource = async (req, res) => {
             permission
         });
 
-        const shareLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/shared/${accessToken}`;
+        const frontendUrl = process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
+        const shareLink = `${frontendUrl}/shared/${accessToken}`;
         const resourceName = resource.fileName || resource.name;
 
         // Send email notification

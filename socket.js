@@ -5,9 +5,11 @@ const userSocketMap = new Map(); // userId -> socketId
 
 module.exports = {
     init: (httpServer) => {
+        const clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, "") : "http://localhost:5173";
+
         io = new Server(httpServer, {
             cors: {
-                origin: "http://localhost:5173",
+                origin: [clientUrl, "http://localhost:5173", "https://googledrive-frontend-gamma.vercel.app"],
                 methods: ["GET", "POST", "PUT", "DELETE"],
                 credentials: true
             }

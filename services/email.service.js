@@ -6,9 +6,12 @@ const transporter = nodemailer.createTransport({
     port: parseInt(process.env.SMTP_PORT || "587"),
     secure: false, // true for 465, false for other ports
     auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-    }
+        user: process.env.SMTP_USER || process.env.EMAIL_USER,
+        pass: process.env.SMTP_PASS || process.env.EMAIL_PASS
+    },
+    // Add timeouts
+    connectionTimeout: 10000,
+    socketTimeout: 10000
 });
 
 // Send share notification email
@@ -65,7 +68,7 @@ exports.sendDriveInvitation = async (recipientEmail, senderName, driveName, role
                     <p><strong>${senderName}</strong> has invited you to join the shared drive "<strong>${driveName}</strong>".</p>
                     <p>Your role: <strong style="text-transform: capitalize;">${role}</strong></p>
                     <p style="margin: 20px 0;">
-                        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/shared-drives" style="background: #1a73e8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+                        <a href="${process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:5173'}/shared-drives" style="background: #1a73e8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
                             View Shared Drives
                         </a>
                     </p>
