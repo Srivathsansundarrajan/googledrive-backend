@@ -52,14 +52,8 @@ exports.register = async (req, res) => {
       console.log("Activation email sent successfully");
     } catch (emailError) {
       console.error("Failed to send activation email:", emailError);
-      // Optional: Delete the user if email request fails so they can try again?
-      // await User.findByIdAndDelete(user._id);
-      // await Token.deleteMany({ userId: user._id });
-      // return res.status(500).json({ message: "Failed to send activation email. Please try again." });
-
-      // For now, let's return error so frontend stops loading
       return res.status(500).json({
-        message: "Account created but failed to send email. Please contact support or try again.",
+        message: "Account created but failed to send email. please try again.",
         error: emailError.message
       });
     }

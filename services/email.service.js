@@ -2,19 +2,13 @@ const nodemailer = require("nodemailer");
 
 // Create transporter - configure with your SMTP settings
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: parseInt(process.env.SMTP_PORT || "465"),
-    secure: true,
+    service: "gmail",
     auth: {
         user: process.env.SMTP_USER || process.env.EMAIL_USER,
         pass: process.env.SMTP_PASS || process.env.EMAIL_PASS
     },
-    tls: {
-        rejectUnauthorized: false
-    },
-    family: 4, // Force IPv4
-    connectionTimeout: 30000, // 30 seconds
-    socketTimeout: 30000
+    connectionTimeout: 5000,
+    socketTimeout: 5000
 });
 
 // Send share notification email

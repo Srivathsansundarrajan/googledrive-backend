@@ -8,19 +8,14 @@ if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
 }
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465, // Use SSL
-  secure: true,
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   },
-  tls: {
-    rejectUnauthorized: false
-  },
-  family: 4, // Force IPv4 to avoid ipv6 connection issues
-  connectionTimeout: 30000, // 30 seconds
-  socketTimeout: 30000,
+  // Optimize timeout: fail fast if blocked
+  connectionTimeout: 5000,
+  socketTimeout: 5000,
   logger: true,
   debug: true
 });
