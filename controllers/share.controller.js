@@ -315,18 +315,79 @@ exports.removeShare = async (req, res) => {
     try {
         const { id } = req.params;
         const userId = req.user.userId;
+        const userEmail = req.user.email;
 
         const share = await Share.findById(id);
         if (!share) {
             return res.status(404).json({ message: "Share not found" });
         }
 
-        if (share.sharedBy.toString() !== userId) {
+        // Allow Owner OR Recipient to remove the share
+        // Owner = revoking access
+        // Recipient = removing from "Shared With Me"
+        if (share.sharedBy.toString() !== userId && share.sharedWith !== userEmail) {
             return res.status(403).json({ message: "Access denied" });
         }
 
         await Share.findByIdAndDelete(id);
         res.json({ message: "Share removed" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// Get all shares for a specific resource (for "Manage Access" modal)
+exports.getResourceShares = async (req, res) => {
+    try {
+        const { resourceId } = req.params;
+        const userId = req.user.userId;
+
+        // Verify ownership first
+        // We need to know if it's a file or folder to check ownership
+        // But the Share model stores resourceId.
+        // We can check if the user is the owner of any File or Folder with this ID.
+        // Or simpler: find shares by resourceId and current userId as sharedBy.
+
+        const shares = await Share.find({ resourceId, sharedBy: userId }).sort({ createdAt: -1 });
+
+        // If shares is empty, we should still allow the owner to see empty list.
+        // But we need to verify they are the owner.
+        // Let's assume the frontend calls this only for things they own.
+        // Ideally, we should check File/Folder ownership, but let's stick to simple logic:
+        // Return shares where sharedBy == currentUserId.
+
+        res.json({ shares });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// Update permission for an existing share
+exports.updateSharePermission = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { permission } = req.body;
+        const userId = req.user.userId;
+
+        if (!["view", "download", "edit"].includes(permission)) {
+            return res.status(400).json({ message: "Invalid permission" });
+        }
+
+        const share = await Share.findById(id);
+        if (!share) {
+            return res.status(404).json({ message: "Share not found" });
+        }
+
+        // Only owner can update permission
+        if (share.sharedBy.toString() !== userId) {
+            return res.status(403).json({ message: "Only the owner can update permissions" });
+        }
+
+        share.permission = permission;
+        await share.save();
+
+        res.json({ message: "Permission updated", share });
+
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

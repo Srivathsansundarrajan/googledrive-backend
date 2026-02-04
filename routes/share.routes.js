@@ -18,7 +18,13 @@ router.get("/folder/:token", shareController.getSharedFolderContents);
 // Download shared item (File or Folder) - Public with token
 router.get("/download/:token", shareController.downloadSharedItem);
 
-// Remove share
+// Remove share (revoke or leave)
 router.delete("/:id", authMiddleware, shareController.removeShare);
+
+// Get all shares for a resource (Manage Access)
+router.get("/resource/:resourceId", authMiddleware, shareController.getResourceShares);
+
+// Update share permission
+router.put("/:id", authMiddleware, shareController.updateSharePermission);
 
 module.exports = router;
