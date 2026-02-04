@@ -28,6 +28,19 @@ const sendEmail = async ({ to, subject, html }) => {
   try {
     console.log(`Attempting to send email to ${to}`);
 
+    // DEVELOPER BYPASS: If SKIP_EMAIL is true, just log the content and return success
+    // This allows testing without a working email provider (e.g. if Brevo account is suspended)
+    if (process.env.SKIP_EMAIL === "true") {
+      console.log("---------------------------------------------------");
+      console.log("⚠️ EMAIL BYPASS MODE ENABLED (SKIP_EMAIL=true) ⚠️");
+      console.log(`To: ${to}`);
+      console.log(`Subject: ${subject}`);
+      console.log("Content/Link (Search here for links):");
+      console.log(html); // Log HTML so user can find the href="..." link
+      console.log("---------------------------------------------------");
+      return { message: "Email skipped (Developer Mode)" };
+    }
+
     // OPTION A: Use Brevo (Recommended for Free Tier -> Send to ANYONE)
     if (process.env.BREVO_API_KEY) {
       console.log("Using Brevo API...");
