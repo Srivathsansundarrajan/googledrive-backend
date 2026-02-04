@@ -17,12 +17,15 @@ const app = express();
 //   })
 // );
 
+// Remove trailing slash from CLIENT_URL if present
+const clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, "") : "";
+const allowedOrigins = ["http://localhost:5173", clientUrl].filter(Boolean);
+
+console.log("Allowed CORS Origins:", allowedOrigins);
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      process.env.CLIENT_URL, // Deployed frontend URL
-    ].filter(Boolean),
+    origin: allowedOrigins,
     credentials: true,
   })
 );
