@@ -1,4 +1,6 @@
 const User = require("../models/User");
+const File = require("../models/File");
+const mongoose = require("mongoose");
 
 // Get storage usage for user
 exports.getStorageUsage = async (req, res) => {
@@ -6,9 +8,11 @@ exports.getStorageUsage = async (req, res) => {
         const userId = req.user.userId;
         const user = await User.findById(userId);
 
-        // Check if cached storageUsed exists and is not undefined
-        // If query param ?breakdown=true is present, we skip this fast path to force recalculation/breakdown
-        if (user && user.storageUsed !== undefined && user.storageUsed !== null && req.query.breakdown !== 'true') {
+        // Check if cached storageUsed exists and is not undefined/null AND is greater than 0
+        // We trust positive values to be (mostly) accurate and use the fast path.
+        // If it sends 0, we verify it by running the aggregation (fast for empty drives, fixes "stuck at 0" bugs).
+        // If query param ?breakdown=true is present, we skip this fast path to force recalculation/breakdown.
+        if (user && user.storageUsed !== undefined && user.storageUsed !== null && user.storageUsed > 0 && req.query.breakdown !== 'true') {
             // Return cached value, but still get breakdown efficiently if needed?
             // Actually sidebar just needs total. The breakdown modal calls this too? 
             // Yes. To support breakdown without heavy query, we might need to cache breakdown too.
