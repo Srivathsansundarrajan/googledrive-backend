@@ -3,15 +3,18 @@ const jwt = require("jsonwebtoken");
 module.exports = (req, res, next) => {
   try {
     // Expect header: Authorization: Bearer <token>
+    let token;
     const authHeader = req.headers.authorization;
 
-    if (!authHeader) {
-      return res.status(401).json({ message: "Authorization header missing" });
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1];
+    } else if (req.query.token) {
+      // Allow token in query param (for downloads)
+      token = req.query.token;
     }
 
-    const token = authHeader.split(" ")[1];
     if (!token) {
-      return res.status(401).json({ message: "Token missing" });
+      return res.status(401).json({ message: "Authorization header missing" });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);

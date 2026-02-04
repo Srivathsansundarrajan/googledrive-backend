@@ -9,7 +9,12 @@ module.exports = {
 
         io = new Server(httpServer, {
             cors: {
-                origin: [clientUrl, "http://localhost:5173", "https://googledrive-frontend-gamma.vercel.app"],
+                origin: [
+                    clientUrl,
+                    "http://localhost:5173",
+                    "http://127.0.0.1:5173",
+                    "https://googledrive-frontend-gamma.vercel.app"
+                ],
                 methods: ["GET", "POST", "PUT", "DELETE"],
                 credentials: true
             }
