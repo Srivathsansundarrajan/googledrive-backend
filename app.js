@@ -7,15 +7,26 @@ const authMiddleware = require("./middleware/auth.middleware");
 const app = express();
 
 /* ---------- CORS (local + deployed frontend) ---------- */
+// app.use(
+//   cors({
+//     origin: [
+//       "http://localhost:5173",
+//       "https://googledrive-frontend-gamma.vercel.app"
+//     ],
+//     credentials: true,
+//   })
+// );
+
 app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://googledrive-frontend-gamma.vercel.app"
-    ],
+      process.env.CLIENT_URL, // Deployed frontend URL
+    ].filter(Boolean),
     credentials: true,
   })
 );
+
 
 
 

@@ -69,17 +69,34 @@ exports.deleteNotification = async (req, res) => {
     }
 };
 
+const socket = require("../socket");
+
 // Internal helper to create notification
 exports.createNotification = async (recipientId, type, title, message, link = null) => {
     try {
-        await Notification.create({
+        const newNotification = await Notification.create({
             recipientId,
             type,
             title,
             message,
             link
         });
+
+        // Emit socket event
+        try {
+            const io = socket.getIO();
+            const socketId = socket.getUserSocketId(recipientId.toString());
+            if (socketId) {
+                io.to(socketId).emit("new_notification", newNotification);
+            }
+        } catch (err) {
+            console.error("Socket emit error:", err);
+        }
+
     } catch (err) {
         console.error("Failed to create notification:", err);
     }
+    // Added return to ensure promise resolves correctly if awaited
+    return;
 };
+
