@@ -34,4 +34,7 @@ router.post("/:id/move", authMiddleware, sharedDriveController.moveToSharedDrive
 const { upload } = require("../middleware/upload.middleware");
 router.post("/:id/upload", authMiddleware, upload.single("file"), sharedDriveController.uploadToSharedDrive);
 
+// Download folder in shared drive
+router.get("/:id/folders/:folderId/download", authMiddleware, sharedDriveController.downloadFolderInDrive);
+
 module.exports = router;

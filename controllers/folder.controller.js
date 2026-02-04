@@ -154,3 +154,80 @@ exports.moveFolder = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// Download folder as ZIP
+exports.downloadFolder = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const folderId = req.params.id;
+    const archiver = require("archiver");
+
+    const folder = await Folder.findById(folderId);
+    if (!folder) {
+      return res.status(404).json({ message: "Folder not found" });
+    }
+
+    if (folder.ownerId.toString() !== userId) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // Set headers for ZIP download
+    res.attachment(`${folder.name}.zip`);
+
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    archive.pipe(res);
+
+    // Helper to add folder contents recursively
+    const addFolderToArchive = async (currentFolder, archivePath) => {
+      // Calculate pathPrefix for database query
+      // If currentFolder is the root of the download, we want files inside it.
+      // Files inside have folderPath = currentFolder.parentPath + "/" + currentFolder.name
+
+      const currentParentPath = currentFolder.parentPath === "/" ? "" : currentFolder.parentPath;
+      const currentFullPath = `${currentParentPath}/${currentFolder.name}`;
+
+      // Get subfolders
+      const subfolders = await Folder.find({
+        ownerId: userId,
+        parentPath: currentFullPath,
+        isDeleted: { $ne: true }
+      });
+
+      // Get files in this folder
+      const files = await File.find({
+        ownerId: userId,
+        folderPath: currentFullPath,
+        isDeleted: { $ne: true }
+      });
+
+      // Add files to archive
+      for (const file of files) {
+        const s3Stream = s3.getObject({
+          Bucket: process.env.AWS_S3_BUCKET,
+          Key: file.s3Key
+        }).createReadStream();
+
+        const zipName = archivePath ? `${archivePath}/${file.fileName}` : file.fileName;
+        archive.append(s3Stream, { name: zipName });
+      }
+
+      // Recursively add subfolders
+      for (const subfolder of subfolders) {
+        const nextArchivePath = archivePath ? `${archivePath}/${subfolder.name}` : subfolder.name;
+        // Add an empty folder entry if needed (archiver handles this usually by file paths, but good to ensure empty dirs exist)
+        archive.append(Buffer.from([]), { name: `${nextArchivePath}/` });
+
+        await addFolderToArchive(subfolder, nextArchivePath);
+      }
+    };
+
+    await addFolderToArchive(folder, "");
+    await archive.finalize();
+
+  } catch (err) {
+    console.error("DOWNLOAD FOLDER ERROR:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+};

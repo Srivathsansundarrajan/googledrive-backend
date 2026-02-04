@@ -15,6 +15,9 @@ router.get("/access/:token", shareController.accessByToken);
 // Get shared folder contents (public access with token)
 router.get("/folder/:token", shareController.getSharedFolderContents);
 
+// Download shared item (File or Folder) - Public with token
+router.get("/download/:token", shareController.downloadSharedItem);
+
 // Remove share
 router.delete("/:id", authMiddleware, shareController.removeShare);
 

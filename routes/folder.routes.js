@@ -29,4 +29,11 @@ router.put(
   folderController.moveFolder
 );
 
+// Download folder
+router.get(
+  "/:id/download",
+  authMiddleware,
+  folderController.downloadFolder
+);
+
 module.exports = router;

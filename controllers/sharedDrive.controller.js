@@ -415,3 +415,86 @@ exports.uploadToSharedDrive = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+// Download folder in shared drive as ZIP
+exports.downloadFolderInDrive = async (req, res) => {
+    try {
+        const { id, folderId } = req.params;
+        const userId = req.user.userId;
+        const userEmail = req.user.email;
+        const archiver = require("archiver");
+        const s3 = require("../services/s3.service");
+
+        const sharedDrive = await SharedDrive.findById(id);
+        if (!sharedDrive) {
+            return res.status(404).json({ message: "Shared drive not found" });
+        }
+
+        // Check permissions (Member can download)
+        const member = sharedDrive.members.find(m => m.email === userEmail);
+        if (!member) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
+        const folder = await Folder.findById(folderId);
+        if (!folder) {
+            return res.status(404).json({ message: "Folder not found" });
+        }
+
+        // Verify folder belongs to this shared drive
+        if (folder.sharedDriveId.toString() !== id) {
+            return res.status(400).json({ message: "Folder does not belong to this shared drive" });
+        }
+
+        // Set headers for ZIP download
+        res.attachment(`${folder.name}.zip`);
+
+        const archive = archiver("zip", { zlib: { level: 9 } });
+        archive.pipe(res);
+
+        // Helper to add folder contents recursively
+        const addFolderToArchive = async (currentFolder, archivePath) => {
+            const currentParentPath = currentFolder.parentPath === "/" ? "" : currentFolder.parentPath;
+            const currentFullPath = `${currentParentPath}/${currentFolder.name}`;
+
+            // Get subfolders in this drive
+            const subfolders = await Folder.find({
+                sharedDriveId: id,
+                parentPath: currentFullPath
+            });
+
+            // Get files in this folder
+            const files = await File.find({
+                sharedDriveId: id,
+                folderPath: currentFullPath
+            });
+
+            // Add files to archive
+            for (const file of files) {
+                const s3Stream = s3.getObject({
+                    Bucket: process.env.AWS_S3_BUCKET,
+                    Key: file.s3Key
+                }).createReadStream();
+
+                const zipName = archivePath ? `${archivePath}/${file.fileName}` : file.fileName;
+                archive.append(s3Stream, { name: zipName });
+            }
+
+            // Recursively add subfolders
+            for (const subfolder of subfolders) {
+                const nextArchivePath = archivePath ? `${archivePath}/${subfolder.name}` : subfolder.name;
+                archive.append(Buffer.from([]), { name: `${nextArchivePath}/` });
+                await addFolderToArchive(subfolder, nextArchivePath);
+            }
+        };
+
+        await addFolderToArchive(folder, "");
+        await archive.finalize();
+
+    } catch (err) {
+        console.error("DOWNLOAD SHARED DRIVE FOLDER ERROR:", err);
+        if (!res.headersSent) {
+            res.status(500).json({ error: err.message });
+        }
+    }
+};
