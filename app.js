@@ -19,13 +19,30 @@ const app = express();
 
 // Remove trailing slash from CLIENT_URL if present
 const clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, "") : "";
-const allowedOrigins = ["http://localhost:5173", clientUrl].filter(Boolean);
-
-console.log("Allowed CORS Origins:", allowedOrigins);
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      const allowedOrigins = ["http://localhost:5173", clientUrl].filter(Boolean);
+
+      // Check for exact match
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Check for Vercel Preview URLs
+      // Matches: https://googledrive-frontend-*.vercel.app
+      const vercelPreviewPattern = /^https:\/\/googledrive-frontend.*\.vercel\.app$/;
+      if (vercelPreviewPattern.test(origin)) {
+        return callback(null, true);
+      }
+
+      console.log("Blocked CORS Origin:", origin);
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
