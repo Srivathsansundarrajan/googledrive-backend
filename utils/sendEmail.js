@@ -59,14 +59,19 @@ const sendEmail = async ({ to, subject, html }) => {
     // OPTION B: Use Resend (Free Tier -> Send to Verification ONLY)
     if (resend) {
       console.log("Using Resend API...");
-      const data = await resend.emails.send({
+      const response = await resend.emails.send({
         from: "Google Drive Clone <onboarding@resend.dev>", // Free tier must use this or verified domain
         to: [to],
         subject: subject,
         html: html,
       });
-      console.log("Email sent via Resend:", data);
-      return data;
+      console.log("Email sent via Resend (Response):", response);
+
+      if (response.error) {
+        throw new Error(`Resend Error: ${response.error.message || JSON.stringify(response.error)}`);
+      }
+
+      return response.data;
     }
 
     // OPTION C: Use Gmail SMTP (Likely to fail on Render free tier)
