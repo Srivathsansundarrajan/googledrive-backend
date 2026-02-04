@@ -1,6 +1,12 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-// Create transporter - configure with your SMTP settings
+// Setup Resend
+let resend;
+if (process.env.RESEND_API_KEY) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+}
+
+// Create transporter (Fallback for SMTP)
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -12,15 +18,11 @@ const transporter = nodemailer.createTransport({
 });
 
 // Send share notification email
+// Send share notification email
 exports.sendShareNotification = async (recipientEmail, senderName, resourceName, resourceType, shareLink) => {
     try {
-        if (!process.env.SMTP_USER) {
-            console.log("[Email] SMTP not configured, skipping notification");
-            return;
-        }
-
         const mailOptions = {
-            from: `"${senderName}" <${process.env.SMTP_USER}>`,
+            from: `"${senderName}" <${process.env.EMAIL_USER}>`,
             to: recipientEmail,
             subject: `${senderName} shared a ${resourceType} with you`,
             html: `
@@ -39,7 +41,23 @@ exports.sendShareNotification = async (recipientEmail, senderName, resourceName,
             `
         };
 
-        await transporter.sendMail(mailOptions);
+        if (resend) {
+            console.log("[Email] Using Resend for Share Notification...");
+            await resend.emails.send({
+                from: "Google Drive Clone <onboarding@resend.dev>",
+                to: [recipientEmail],
+                subject: mailOptions.subject,
+                html: mailOptions.html
+            });
+        } else {
+            console.log("[Email] Using SMTP for Share Notification...");
+            if (!process.env.SMTP_USER && !process.env.EMAIL_USER) {
+                console.log("[Email] SMTP not configured, skipping notification");
+                return;
+            }
+            await transporter.sendMail(mailOptions);
+        }
+
         console.log(`[Email] Share notification sent to ${recipientEmail}`);
     } catch (err) {
         console.error("[Email] Failed to send share notification:", err.message);
@@ -47,16 +65,11 @@ exports.sendShareNotification = async (recipientEmail, senderName, resourceName,
 };
 
 // Send shared drive invitation email
+// Send shared drive invitation email
 exports.sendDriveInvitation = async (recipientEmail, senderName, driveName, role) => {
     try {
-        const emailUser = process.env.SMTP_USER || process.env.EMAIL_USER;
-        if (!emailUser) {
-            console.log("[Email] SMTP not configured, skipping invitation");
-            return;
-        }
-
         const mailOptions = {
-            from: `"${senderName}" <${process.env.SMTP_USER}>`,
+            from: `"${senderName}" <${process.env.EMAIL_USER}>`,
             to: recipientEmail,
             subject: `${senderName} invited you to "${driveName}"`,
             html: `
@@ -76,7 +89,23 @@ exports.sendDriveInvitation = async (recipientEmail, senderName, driveName, role
             `
         };
 
-        await transporter.sendMail(mailOptions);
+        if (resend) {
+            console.log("[Email] Using Resend for Drive Invitation...");
+            await resend.emails.send({
+                from: "Google Drive Clone <onboarding@resend.dev>",
+                to: [recipientEmail],
+                subject: mailOptions.subject,
+                html: mailOptions.html
+            });
+        } else {
+            const emailUser = process.env.SMTP_USER || process.env.EMAIL_USER;
+            if (!emailUser) {
+                console.log("[Email] SMTP not configured, skipping invitation");
+                return;
+            }
+            await transporter.sendMail(mailOptions);
+        }
+
         console.log(`[Email] Drive invitation sent to ${recipientEmail}`);
     } catch (err) {
         console.error("[Email] Failed to send drive invitation:", err.message);
