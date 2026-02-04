@@ -18,7 +18,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// 2. Setup Resend (Primary since Render blocks Gmail)
+// 2. Setup Resend (Target 2)
 let resend;
 if (process.env.RESEND_API_KEY) {
   resend = new Resend(process.env.RESEND_API_KEY);
@@ -28,7 +28,35 @@ const sendEmail = async ({ to, subject, html }) => {
   try {
     console.log(`Attempting to send email to ${to}`);
 
-    // OPTION A: Use Resend if available (Recommended for Cloud)
+    // OPTION A: Use Brevo (Recommended for Free Tier -> Send to ANYONE)
+    if (process.env.BREVO_API_KEY) {
+      console.log("Using Brevo API...");
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "api-key": process.env.BREVO_API_KEY,
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          sender: { email: process.env.EMAIL_USER || "noreply@googledriveclone.com", name: "Google Drive Clone" },
+          to: [{ email: to }],
+          subject: subject,
+          htmlContent: html
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Brevo Error: ${JSON.stringify(errorData)}`);
+      }
+
+      const data = await response.json();
+      console.log("Email sent via Brevo:", data);
+      return data;
+    }
+
+    // OPTION B: Use Resend (Free Tier -> Send to Verification ONLY)
     if (resend) {
       console.log("Using Resend API...");
       const data = await resend.emails.send({
@@ -41,7 +69,7 @@ const sendEmail = async ({ to, subject, html }) => {
       return data;
     }
 
-    // OPTION B: Use Gmail SMTP (Likely to fail on Render free tier)
+    // OPTION C: Use Gmail SMTP (Likely to fail on Render free tier)
     console.log("Using Gmail SMTP...");
     const info = await transporter.sendMail({
       from: `"Google Drive Clone" <${process.env.EMAIL_USER}>`,
