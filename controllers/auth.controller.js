@@ -35,9 +35,9 @@ exports.register = async (req, res) => {
       expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
     });
 
-    // const activationLink = `http://localhost:5000/auth/activate/${tokenValue}`;
-    const activationLink =
-      `${process.env.BACKEND_BASE_URL}/auth/activate/${tokenValue}`;
+    // Generate link to FRONTEND activation page
+    const clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, "") : "http://localhost:5173";
+    const activationLink = `${clientUrl}/activate/${tokenValue}`;
 
     try {
       await sendEmail({
@@ -156,9 +156,9 @@ exports.forgotPassword = async (req, res) => {
       expiresAt: Date.now() + 15 * 60 * 1000 // 15 minutes
     });
 
-    // const resetLink = `http://localhost:3000/reset-password/${token}`;
-    const resetLink =
-      `${process.env.FRONTEND_BASE_URL}/reset-password/${token}`;
+    // Generate link to FRONTEND reset page
+    const clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, "") : "http://localhost:5173";
+    const resetLink = `${clientUrl}/reset-password/${token}`;
 
     await sendEmail({
       to: user.email,
