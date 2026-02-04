@@ -4,6 +4,7 @@ const Folder = require("../models/Folder");
 
 const SharedDrive = require("../models/SharedDrive");
 const notificationController = require("../controllers/notification.controller");
+const socket = require("../socket");
 
 // Add a sticky note
 exports.addNote = async (req, res) => {
@@ -31,6 +32,16 @@ exports.addNote = async (req, res) => {
             content,
             color
         });
+
+        // Emit real-time note to the shared drive room if it belongs to one
+        if (resource.sharedDriveId) {
+            try {
+                const io = socket.getIO();
+                io.to(resource.sharedDriveId.toString()).emit("new_note", note);
+            } catch (err) {
+                console.error("Socket emit error:", err);
+            }
+        }
 
         // Notify shared drive members if applicable
         if (resource.sharedDriveId) {
@@ -156,6 +167,20 @@ exports.deleteNote = async (req, res) => {
 
         if (note.createdBy.toString() !== userId) {
             return res.status(403).json({ message: "You can only delete your own notes" });
+        }
+
+        // Check if note belongs to a shared drive resource to emit delete event
+        // We need resourceType and resourceId from the note
+        const Model = note.resourceType === "file" ? File : Folder;
+        const resource = await Model.findById(note.resourceId);
+
+        if (resource && resource.sharedDriveId) {
+            try {
+                const io = socket.getIO();
+                io.to(resource.sharedDriveId.toString()).emit("delete_note", id);
+            } catch (err) {
+                console.error("Socket emit error:", err);
+            }
         }
 
         await StickyNote.findByIdAndDelete(id);

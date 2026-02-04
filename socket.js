@@ -25,6 +25,16 @@ module.exports = {
                 }
             });
 
+            socket.on("join_drive", (driveId) => {
+                socket.join(driveId);
+                console.log(`Socket ${socket.id} joined drive ${driveId}`);
+            });
+
+            socket.on("leave_drive", (driveId) => {
+                socket.leave(driveId);
+                console.log(`Socket ${socket.id} left drive ${driveId}`);
+            });
+
             socket.on("disconnect", () => {
                 console.log("Client disconnected:", socket.id);
                 // Remove user from map

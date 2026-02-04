@@ -35,6 +35,7 @@ exports.getMessages = async (req, res) => {
 };
 
 const notificationController = require("../controllers/notification.controller");
+const socket = require("../socket");
 
 // ... (existing code)
 
@@ -68,7 +69,20 @@ exports.sendMessage = async (req, res) => {
             message: message.trim()
         });
 
-        // Notify other members
+        // Emit real-time message to the room
+        try {
+            const io = socket.getIO();
+            io.to(driveId).emit("receive_message", {
+                _id: chatMessage._id,
+                userEmail: chatMessage.userEmail,
+                message: chatMessage.message,
+                createdAt: chatMessage.createdAt
+            });
+        } catch (err) {
+            console.error("Socket emit error:", err);
+        }
+
+        // Notify other members (Persistent notification)
         const otherMembers = sharedDrive.members.filter(m => m.email !== userEmail);
         for (const member of otherMembers) {
             if (member.userId) {
