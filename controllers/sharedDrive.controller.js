@@ -498,3 +498,114 @@ exports.downloadFolderInDrive = async (req, res) => {
         }
     }
 };
+
+// Delete item (file or folder) in shared drive
+exports.deleteItemInDrive = async (req, res) => {
+    try {
+        const { id, type, itemId } = req.params;
+        const userEmail = req.user.email;
+
+        // 1. Verify Shared Drive Access
+        const sharedDrive = await SharedDrive.findById(id);
+        if (!sharedDrive) {
+            return res.status(404).json({ message: "Shared drive not found" });
+        }
+
+        const member = sharedDrive.members.find(m => m.email === userEmail);
+        if (!member) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
+        // 2. Verify Role (Admins and Editors can delete, Viewers cannot)
+        // Adjust roles as per your requirement. Usually "Content Manager" or "Manager" can delete.
+        if (member.role === "viewer") {
+            return res.status(403).json({ message: "Viewers cannot delete items" });
+        }
+
+        // 3. Process Deletion
+        if (type === "file") {
+            const file = await File.findById(itemId);
+            if (!file) return res.status(404).json({ message: "File not found" });
+
+            if (file.sharedDriveId.toString() !== id) {
+                return res.status(400).json({ message: "File does not belong to this shared drive" });
+            }
+
+            // Soft delete
+            // Actually, for shared drives, we might want to move to a specialized "Trash" or delete permanently.
+            // Let's do permanent delete for now to match behavior, or soft delete if 'isDeleted' schema supports it.
+            // Looking at file controller, we use soft delete.
+            file.isDeleted = true; // Wait, shared drive files might need explicit 'isDeleted' handling in queries?
+            // Yes, listSharedDrives filters by folders/files... wait.
+            // getSharedDriveContents -> Folder.find({ sharedDriveId: id }) - DOES NOT check isDeleted!
+            // We need to FIX getSharedDriveContents too if we use soft delete.
+            // For now, let's HARD DELETE to ensure they disappear, as shared drive trash management is complex.
+
+            // Actually, let's use soft delete but we must update the list query.
+            // But wait, the previous code for normal drive uses soft delete.
+            // Let's stick to HARD DELETE for Shared Drive items for simplicity unless user asked for Trash bin.
+            // The prompt says "no option to delete".
+
+            // Hard Delete S3 Object
+            const s3 = require("../services/s3.service");
+            try {
+                await s3.deleteObject({
+                    Bucket: process.env.AWS_S3_BUCKET,
+                    Key: file.s3Key
+                }).promise();
+            } catch (e) {
+                console.error("S3 Delete Error", e);
+            }
+
+            await File.findByIdAndDelete(itemId);
+            return res.json({ message: "File deleted" });
+        }
+
+        if (type === "folder") {
+            const folder = await Folder.findById(itemId);
+            if (!folder) return res.status(404).json({ message: "Folder not found" });
+
+            if (folder.sharedDriveId.toString() !== id) {
+                return res.status(400).json({ message: "Folder does not belong to this shared drive" });
+            }
+
+            // Recursive Hard Delete
+            const parentPathStr = folder.parentPath === "/" ? "" : folder.parentPath;
+            const fullFolderPath = `${parentPathStr}/${folder.name}`;
+
+            // Delete all sub-files
+            const filesToDelete = await File.find({
+                sharedDriveId: id,
+                folderPath: { $regex: `^${fullFolderPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}` }
+            });
+
+            const s3 = require("../services/s3.service");
+            for (const f of filesToDelete) {
+                try {
+                    await s3.deleteObject({
+                        Bucket: process.env.AWS_S3_BUCKET,
+                        Key: f.s3Key
+                    }).promise();
+                } catch (e) { console.error(e); }
+                await File.findByIdAndDelete(f._id);
+            }
+
+            // Delete subfolders
+            await Folder.deleteMany({
+                sharedDriveId: id,
+                parentPath: { $regex: `^${fullFolderPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}` }
+            });
+
+            // Delete the folder itself
+            await Folder.findByIdAndDelete(itemId);
+
+            return res.json({ message: "Folder deleted" });
+        }
+
+        res.status(400).json({ message: "Invalid type" });
+
+    } catch (err) {
+        console.error("Delete Item In Drive Error:", err);
+        res.status(500).json({ error: err.message });
+    }
+};

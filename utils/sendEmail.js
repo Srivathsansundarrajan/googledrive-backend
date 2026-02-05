@@ -41,8 +41,22 @@ const sendEmail = async ({ to, subject, html }) => {
       return { message: "Email skipped (Developer Mode)" };
     }
 
-    // OPTION A: Use Brevo (Recommended for Free Tier -> Send to ANYONE)
-    if (process.env.BREVO_API_KEY) {
+    // DETERMINE PROVIDER (brevo, resend, gmail, or auto)
+    let provider = process.env.EMAIL_PROVIDER ? process.env.EMAIL_PROVIDER.toLowerCase() : 'auto';
+
+    // Auto-resolution logic
+    if (provider === 'auto') {
+      if (process.env.BREVO_API_KEY) provider = 'brevo';
+      else if (process.env.RESEND_API_KEY) provider = 'resend';
+      else provider = 'gmail';
+    }
+
+    console.log(`Using Email Provider: ${provider.toUpperCase()}`);
+
+    // OPTION A: Brevo
+    if (provider === 'brevo') {
+      if (!process.env.BREVO_API_KEY) throw new Error("BREVO_API_KEY is missing but provider is set to 'brevo'");
+
       console.log("Using Brevo API...");
       const response = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
@@ -69,8 +83,10 @@ const sendEmail = async ({ to, subject, html }) => {
       return data;
     }
 
-    // OPTION B: Use Resend (Free Tier -> Send to Verification ONLY)
-    if (resend) {
+    // OPTION B: Resend
+    if (provider === 'resend') {
+      if (!resend) throw new Error("RESEND_API_KEY is missing/invalid but provider is set to 'resend'");
+
       console.log("Using Resend API...");
       const response = await resend.emails.send({
         from: "Google Drive Clone <onboarding@resend.dev>", // Free tier must use this or verified domain
@@ -87,16 +103,20 @@ const sendEmail = async ({ to, subject, html }) => {
       return response.data;
     }
 
-    // OPTION C: Use Gmail SMTP (Likely to fail on Render free tier)
-    console.log("Using Gmail SMTP...");
-    const info = await transporter.sendMail({
-      from: `"Google Drive Clone" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      html
-    });
-    console.log("Email sent via Gmail: %s", info.messageId);
-    return info;
+    // OPTION C: Gmail SMTP
+    if (provider === 'gmail') {
+      console.log("Using Gmail SMTP...");
+      const info = await transporter.sendMail({
+        from: `"Google Drive Clone" <${process.env.EMAIL_USER}>`,
+        to,
+        subject,
+        html
+      });
+      console.log("Email sent via Gmail: %s", info.messageId);
+      return info;
+    }
+
+    throw new Error(`Unknown or unconfigured email provider: ${provider}`);
 
   } catch (error) {
     console.error("Error sending email:", error);

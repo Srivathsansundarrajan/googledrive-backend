@@ -26,7 +26,7 @@ exports.uploadFile = async (req, res) => {
 
     const isZip =
       file.mimetype === "application/zip" ||
-      file.originalname.endsWith(".zip");
+      file.originalname.toLowerCase().endsWith(".zip");
 
     /* ---------------- ZIP UPLOAD ---------------- */
     if (isZip) {

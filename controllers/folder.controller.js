@@ -64,10 +64,16 @@ exports.deleteFolder = async (req, res) => {
       ? `/${folder.name}`
       : `${folder.parentPath}/${folder.name}`;
 
+    // Escape special characters for regex
+    const escapedPath = folderFullPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Regex to match exact path or subpaths: matches "/path" (end) or "/path/" (nested)
+    const pathRegex = new RegExp(`^${escapedPath}(/|$)`);
+
     // Find all files in this folder and subfolders
     const filesToDelete = await File.find({
       ownerId: userId,
-      folderPath: { $regex: `^${folderFullPath}` }
+      folderPath: { $regex: pathRegex }
     });
 
     // Delete files from S3
@@ -85,13 +91,13 @@ exports.deleteFolder = async (req, res) => {
     // Delete files from database
     await File.deleteMany({
       ownerId: userId,
-      folderPath: { $regex: `^${folderFullPath}` }
+      folderPath: { $regex: pathRegex }
     });
 
     // Find all subfolders
     await Folder.deleteMany({
       ownerId: userId,
-      parentPath: { $regex: `^${folderFullPath}` }
+      parentPath: { $regex: pathRegex }
     });
 
     // Delete the folder itself
@@ -135,15 +141,22 @@ exports.moveFolder = async (req, res) => {
     folder.parentPath = targetPath;
     await folder.save();
 
+    // Escape special characters for regex
+    const escapedOldPath = oldFullPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Regex to match exact path or subpaths: matches "/path" (end) or "/path/" (nested)
+    // using strict boundary check to avoid partial matches (e.g. matching "/Test2" when looking for "/Test")
+    const pathRegex = new RegExp(`^${escapedOldPath}(/|$)`);
+
     // Update all subfolders' parentPath
     await Folder.updateMany(
-      { ownerId: userId, parentPath: { $regex: `^${oldFullPath}` } },
+      { ownerId: userId, parentPath: { $regex: pathRegex } },
       [{ $set: { parentPath: { $replaceOne: { input: "$parentPath", find: oldFullPath, replacement: newFullPath } } } }]
     );
 
     // Update all files' folderPath
     await File.updateMany(
-      { ownerId: userId, folderPath: { $regex: `^${oldFullPath}` } },
+      { ownerId: userId, folderPath: { $regex: pathRegex } },
       [{ $set: { folderPath: { $replaceOne: { input: "$folderPath", find: oldFullPath, replacement: newFullPath } } } }]
     );
 

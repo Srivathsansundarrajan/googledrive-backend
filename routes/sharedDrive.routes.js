@@ -37,4 +37,7 @@ router.post("/:id/upload", authMiddleware, upload.single("file"), sharedDriveCon
 // Download folder in shared drive
 router.get("/:id/folders/:folderId/download", authMiddleware, sharedDriveController.downloadFolderInDrive);
 
+// Delete item (file/folder) in shared drive
+router.delete("/:id/items/:type/:itemId", authMiddleware, sharedDriveController.deleteItemInDrive);
+
 module.exports = router;
