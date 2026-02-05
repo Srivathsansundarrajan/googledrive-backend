@@ -129,8 +129,8 @@ const sendEmail = async ({ to, subject, html }) => {
       console.log("Using Brevo SMTP...");
       const brevoTransporter = nodemailer.createTransport({
         host: "smtp-relay.brevo.com",
-        port: 465, // Try 465 (SSL) instead of 587
-        secure: true, // Use SSL
+        port: 2525, // Try 2525 (Alternative port)
+        secure: false, // Use STARTTLS
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.BREVO_SMTP_KEY
