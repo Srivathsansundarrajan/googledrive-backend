@@ -162,13 +162,15 @@ exports.moveFolder = async (req, res) => {
     // Update all subfolders' parentPath
     await Folder.updateMany(
       { ownerId: userId, parentPath: { $regex: pathRegex } },
-      [{ $set: { parentPath: { $replaceOne: { input: "$parentPath", find: oldFullPath, replacement: newFullPath } } } }]
+      [{ $set: { parentPath: { $replaceOne: { input: "$parentPath", find: oldFullPath, replacement: newFullPath } } } }],
+      { updatePipeline: true }
     );
 
     // Update all files' folderPath
     await File.updateMany(
       { ownerId: userId, folderPath: { $regex: pathRegex } },
-      [{ $set: { folderPath: { $replaceOne: { input: "$folderPath", find: oldFullPath, replacement: newFullPath } } } }]
+      [{ $set: { folderPath: { $replaceOne: { input: "$folderPath", find: oldFullPath, replacement: newFullPath } } } }],
+      { updatePipeline: true }
     );
 
     res.json({ message: "Folder moved successfully", folder });
