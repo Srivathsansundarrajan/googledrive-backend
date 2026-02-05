@@ -58,34 +58,37 @@ const sendEmail = async ({ to, subject, html }) => {
 
     console.log(`Using Email Provider: ${provider.toUpperCase()}`);
 
-    // OPTION A: Brevo
+    // OPTION A: Brevo (via Official SDK)
     if (provider === 'brevo') {
       if (!process.env.BREVO_API_KEY) throw new Error("BREVO_API_KEY is missing but provider is set to 'brevo'");
 
-      console.log("Using Brevo API...");
-      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-        method: "POST",
-        headers: {
-          "accept": "application/json",
-          "api-key": process.env.BREVO_API_KEY,
-          "content-type": "application/json"
-        },
-        body: JSON.stringify({
-          sender: { email: process.env.EMAIL_USER || "noreply@googledriveclone.com", name: "Google Drive Clone" },
-          to: [{ email: to }],
-          subject: subject,
-          htmlContent: html
-        })
-      });
+      console.log("Using Brevo API (via SDK)...");
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Brevo Error: ${JSON.stringify(errorData)}`);
+      const SibApiV3Sdk = require('sib-api-v3-sdk');
+      const defaultClient = SibApiV3Sdk.ApiClient.instance;
+
+      // Configure API key authorization: api-key
+      const apiKey = defaultClient.authentications['api-key'];
+      apiKey.apiKey = process.env.BREVO_API_KEY;
+
+      const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+      const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+
+      sendSmtpEmail.subject = subject;
+      sendSmtpEmail.htmlContent = html;
+      sendSmtpEmail.sender = { "name": "Google Drive Clone", "email": process.env.EMAIL_USER || "noreply@googledriveclone.com" };
+      sendSmtpEmail.to = [{ "email": to }];
+
+      try {
+        const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
+        console.log('Email sent via Brevo SDK successfully. Returned data: ' + JSON.stringify(data));
+        return data;
+      } catch (error) {
+        console.error("Brevo SDK Error:", error);
+        // Enhance error message if available
+        const errorMsg = error.response ? JSON.stringify(error.response.body) : error.message;
+        throw new Error(`Brevo API Error: ${errorMsg}`);
       }
-
-      const data = await response.json();
-      console.log("Email sent via Brevo:", data);
-      return data;
     }
 
     // OPTION B: Resend
