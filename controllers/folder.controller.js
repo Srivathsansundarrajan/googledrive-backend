@@ -137,6 +137,14 @@ exports.moveFolder = async (req, res) => {
       ? `/${folder.name}`
       : `${targetPath}/${folder.name}`;
 
+    // CHECK FOR CIRCULAR MOVE
+    // Check if targetPath starts with oldFullPath (e.g. moving /A to /A/B)
+    // We append a slash to ensure we don't match partial names (e.g. /Test vs /Test2)
+    // Exception: if targetPath IS oldFullPath (same location), we caught that in frontend but check here too
+    if (targetPath === oldFullPath || targetPath.startsWith(oldFullPath + "/")) {
+      return res.status(400).json({ message: "Cannot move a folder into itself or its own subfolder" });
+    }
+
     // Update folder's parentPath
     folder.parentPath = targetPath;
     await folder.save();
@@ -164,7 +172,7 @@ exports.moveFolder = async (req, res) => {
 
   } catch (err) {
     console.error("MOVE FOLDER ERROR:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message, error: err.message });
   }
 };
 
