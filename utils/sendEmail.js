@@ -10,7 +10,8 @@ if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
 const { Resend } = require("resend");
 
 // 1. Setup Nodemailer (Fallback)
-const transporter = nodemailer.createTransport({
+// 1. Setup Nodemailer (Fallback: Gmail)
+const gmailTransporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
   secure: false, // Use STARTTLS
@@ -47,8 +48,10 @@ const sendEmail = async ({ to, subject, html }) => {
     let provider = process.env.EMAIL_PROVIDER ? process.env.EMAIL_PROVIDER.toLowerCase() : 'auto';
 
     // Auto-resolution logic
+    // Auto-resolution logic
     if (provider === 'auto') {
-      if (process.env.BREVO_API_KEY) provider = 'brevo';
+      if (process.env.BREVO_SMTP_KEY) provider = 'brevo-smtp';
+      else if (process.env.BREVO_API_KEY) provider = 'brevo';
       else if (process.env.RESEND_API_KEY) provider = 'resend';
       else provider = 'gmail';
     }
@@ -106,15 +109,41 @@ const sendEmail = async ({ to, subject, html }) => {
     }
 
     // OPTION C: Gmail SMTP
+    // OPTION C: Gmail SMTP
     if (provider === 'gmail') {
       console.log("Using Gmail SMTP...");
-      const info = await transporter.sendMail({
+      const info = await gmailTransporter.sendMail({
         from: `"Google Drive Clone" <${process.env.EMAIL_USER}>`,
         to,
         subject,
         html
       });
       console.log("Email sent via Gmail: %s", info.messageId);
+      return info;
+    }
+
+    // OPTION D: Brevo SMTP
+    if (provider === 'brevo-smtp') {
+      if (!process.env.BREVO_SMTP_KEY) throw new Error("BREVO_SMTP_KEY is missing but provider is set to 'brevo-smtp'");
+
+      console.log("Using Brevo SMTP...");
+      const brevoTransporter = nodemailer.createTransport({
+        host: "smtp-relay.brevo.com",
+        port: 587,
+        secure: false, // Use STARTTLS
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.BREVO_SMTP_KEY
+        }
+      });
+
+      const info = await brevoTransporter.sendMail({
+        from: `"Google Drive Clone" <${process.env.EMAIL_USER}>`,
+        to,
+        subject,
+        html
+      });
+      console.log("Email sent via Brevo SMTP: %s", info.messageId);
       return info;
     }
 
