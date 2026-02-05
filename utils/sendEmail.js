@@ -44,19 +44,44 @@ const sendEmail = async ({ to, subject, html }) => {
       return { message: "Email skipped (Developer Mode)" };
     }
 
-    // DETERMINE PROVIDER (brevo, resend, gmail, or auto)
+    // DETERMINE PROVIDER (sendgrid, brevo, resend, gmail, or auto)
     let provider = process.env.EMAIL_PROVIDER ? process.env.EMAIL_PROVIDER.toLowerCase() : 'auto';
 
     // Auto-resolution logic
-    // Auto-resolution logic
     if (provider === 'auto') {
-      if (process.env.BREVO_SMTP_KEY) provider = 'brevo-smtp';
+      if (process.env.SENDGRID_API_KEY) provider = 'sendgrid';
+      else if (process.env.BREVO_SMTP_KEY) provider = 'brevo-smtp';
       else if (process.env.BREVO_API_KEY) provider = 'brevo';
       else if (process.env.RESEND_API_KEY) provider = 'resend';
       else provider = 'gmail';
     }
 
     console.log(`Using Email Provider: ${provider.toUpperCase()}`);
+
+    // OPTION S: SendGrid
+    if (provider === 'sendgrid') {
+      const sgMail = require('@sendgrid/mail');
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+      const msg = {
+        to: to,
+        from: process.env.EMAIL_USER || 'noreply@googledriveclone.com', // Verified sender required
+        subject: subject,
+        html: html,
+      };
+
+      try {
+        const response = await sgMail.send(msg);
+        console.log('Email sent via SendGrid');
+        return response;
+      } catch (error) {
+        console.error('SendGrid Error:', error);
+        if (error.response) {
+          console.error(error.response.body);
+        }
+        throw error;
+      }
+    }
 
     // OPTION A: Brevo (via Official SDK)
     if (provider === 'brevo') {
@@ -111,7 +136,6 @@ const sendEmail = async ({ to, subject, html }) => {
       return response.data;
     }
 
-    // OPTION C: Gmail SMTP
     // OPTION C: Gmail SMTP
     if (provider === 'gmail') {
       console.log("Using Gmail SMTP...");

@@ -1,32 +1,10 @@
-const nodemailer = require("nodemailer");
-const { Resend } = require("resend");
+const sendEmail = require('../utils/sendEmail');
 
-// Setup Resend
-let resend;
-if (process.env.RESEND_API_KEY) {
-    resend = new Resend(process.env.RESEND_API_KEY);
-}
-
-// Create transporter (Fallback for SMTP)
-const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        user: process.env.SMTP_USER || process.env.EMAIL_USER,
-        pass: process.env.SMTP_PASS || process.env.EMAIL_PASS
-    },
-    connectionTimeout: 5000,
-    socketTimeout: 5000
-});
-
-// Send share notification email
 // Send share notification email
 exports.sendShareNotification = async (recipientEmail, senderName, resourceName, resourceType, shareLink) => {
     try {
-        const mailOptions = {
-            from: `"${senderName}" <${process.env.EMAIL_USER}>`,
-            to: recipientEmail,
-            subject: `${senderName} shared a ${resourceType} with you`,
-            html: `
+        const subject = `${senderName} shared a ${resourceType} with you`;
+        const html = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: #1a73e8;">📂 New ${resourceType} shared with you</h2>
                     <p><strong>${senderName}</strong> has shared "${resourceName}" with you.</p>
@@ -39,64 +17,21 @@ exports.sendShareNotification = async (recipientEmail, senderName, resourceName,
                         If you don't recognize the sender, you can ignore this email.
                     </p>
                 </div>
-            `
-        };
+            `;
 
-        if (process.env.BREVO_API_KEY) {
-            console.log("[Email] Using Brevo for Share Notification...");
-            const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-                method: "POST",
-                headers: {
-                    "accept": "application/json",
-                    "api-key": process.env.BREVO_API_KEY,
-                    "content-type": "application/json"
-                },
-                body: JSON.stringify({
-                    sender: { email: process.env.EMAIL_USER || "noreply@googledriveclone.com", name: senderName },
-                    to: [{ email: recipientEmail }],
-                    subject: mailOptions.subject,
-                    htmlContent: mailOptions.html
-                })
-            });
+        await sendEmail({ to: recipientEmail, subject, html });
+        console.log(`[Email] Share notification sent to ${recipientEmail}`);
 
-            if (!response.ok) {
-                const errData = await response.json();
-                console.error("[Email] Brevo Error:", errData);
-            } else {
-                console.log(`[Email] Share notification sent to ${recipientEmail} via Brevo`);
-            }
-        } else if (resend) {
-            console.log("[Email] Using Resend for Share Notification...");
-            await resend.emails.send({
-                from: "Google Drive Clone <onboarding@resend.dev>",
-                to: [recipientEmail],
-                subject: mailOptions.subject,
-                html: mailOptions.html
-            });
-        } else {
-            console.log("[Email] Using SMTP for Share Notification...");
-            if (!process.env.SMTP_USER && !process.env.EMAIL_USER) {
-                console.log("[Email] SMTP not configured, skipping notification");
-                return;
-            }
-            await transporter.sendMail(mailOptions);
-        }
-
-        // console.log(`[Email] Share notification sent to ${recipientEmail}`);
     } catch (err) {
         console.error("[Email] Failed to send share notification:", err.message);
     }
 };
 
 // Send shared drive invitation email
-// Send shared drive invitation email
 exports.sendDriveInvitation = async (recipientEmail, senderName, driveName, role) => {
     try {
-        const mailOptions = {
-            from: `"${senderName}" <${process.env.EMAIL_USER}>`,
-            to: recipientEmail,
-            subject: `${senderName} invited you to "${driveName}"`,
-            html: `
+        const subject = `${senderName} invited you to "${driveName}"`;
+        const html = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: #1a73e8;">🏢 Shared Drive Invitation</h2>
                     <p><strong>${senderName}</strong> has invited you to join the shared drive "<strong>${driveName}</strong>".</p>
@@ -110,50 +45,11 @@ exports.sendDriveInvitation = async (recipientEmail, senderName, driveName, role
                         If you don't have an account yet, please sign up first to access the shared drive.
                     </p>
                 </div>
-            `
-        };
+            `;
 
-        if (process.env.BREVO_API_KEY) {
-            console.log("[Email] Using Brevo for Drive Invitation...");
-            const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-                method: "POST",
-                headers: {
-                    "accept": "application/json",
-                    "api-key": process.env.BREVO_API_KEY,
-                    "content-type": "application/json"
-                },
-                body: JSON.stringify({
-                    sender: { email: process.env.EMAIL_USER || "noreply@googledriveclone.com", name: senderName },
-                    to: [{ email: recipientEmail }],
-                    subject: mailOptions.subject,
-                    htmlContent: mailOptions.html
-                })
-            });
+        await sendEmail({ to: recipientEmail, subject, html });
+        console.log(`[Email] Drive invitation sent to ${recipientEmail}`);
 
-            if (!response.ok) {
-                const errData = await response.json();
-                console.error("[Email] Brevo Error:", errData);
-            } else {
-                console.log(`[Email] Drive invitation sent to ${recipientEmail} via Brevo`);
-            }
-        } else if (resend) {
-            console.log("[Email] Using Resend for Drive Invitation...");
-            await resend.emails.send({
-                from: "Google Drive Clone <onboarding@resend.dev>",
-                to: [recipientEmail],
-                subject: mailOptions.subject,
-                html: mailOptions.html
-            });
-        } else {
-            const emailUser = process.env.SMTP_USER || process.env.EMAIL_USER;
-            if (!emailUser) {
-                console.log("[Email] SMTP not configured, skipping invitation");
-                return;
-            }
-            await transporter.sendMail(mailOptions);
-        }
-
-        // console.log(`[Email] Drive invitation sent to ${recipientEmail}`);
     } catch (err) {
         console.error("[Email] Failed to send drive invitation:", err.message);
     }
