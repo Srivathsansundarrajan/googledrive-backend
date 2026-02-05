@@ -132,7 +132,7 @@ const sendEmail = async ({ to, subject, html }) => {
         port: 2525, // Try 2525 (Alternative port)
         secure: false, // Use STARTTLS
         auth: {
-          user: process.env.EMAIL_USER,
+          user: process.env.BREVO_SMTP_USER, // Specific Brevo SMTP login
           pass: process.env.BREVO_SMTP_KEY
         }
       });
