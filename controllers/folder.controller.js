@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Folder = require("../models/Folder");
 const File = require("../models/File");
 const s3 = require("../services/s3.service");
@@ -26,6 +27,8 @@ exports.createFolder = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
 
 exports.checkFolderExists = async (req, res) => {
   try {
